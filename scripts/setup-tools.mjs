@@ -59,6 +59,11 @@ for (const [name, source] of [['ffmpeg', require('ffmpeg-static')], ['ffprobe', 
 for (const [name, source] of [['ffmpeg', 'ffmpeg-static/LICENSE'], ['ffprobe-NOTICE', '@ffprobe-installer/ffprobe/README.md']]) {
   try { await copyFile(require.resolve(source), path.join(bin, name.endsWith('-NOTICE') ? `${name}.md` : `${name}-LICENSE`)); } catch {}
 }
+for (const extension of ['README', 'LICENSE']) {
+  try { await copyFile(`${require('ffmpeg-static')}.${extension}`, path.join(bin, `ffmpeg-binary.${extension}`)); } catch {}
+}
+await copyFile(require.resolve('ffmpeg-static/README.md'), path.join(bin, 'ffmpeg-package-README.md'));
+await copyFile(require.resolve(`@ffprobe-installer/${process.platform}-${process.arch}/package.json`), path.join(bin, 'ffprobe-package.json'));
 await copyFile(path.join(root, 'resources/THIRD_PARTY.md'), path.join(bin, 'THIRD_PARTY.md'));
 await rm(path.join(bin, 'ffprobe-LICENSE'), { force: true });
 await rm(`${target}.tmp`, { force: true });

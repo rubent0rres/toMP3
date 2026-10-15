@@ -1,10 +1,11 @@
 {
   "name": "tomp3",
   "productName": "toMP3",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Descarga videos de YouTube como MP4 o MP3 desde tu escritorio.",
   "author": "Yoots Software",
   "private": true,
+  "repository": "https://github.com/rubent0rres/toMP3.git",
   "main": "electron/main.cjs",
   "scripts": {
     "tools:setup": "node scripts/setup-tools.mjs",
@@ -16,7 +17,8 @@
     "test": "node --test tests/*.test.cjs",
     "pack": "npm run tools:setup && npm run build && electron-builder --dir",
     "dist": "npm run tools:setup && npm run build && electron-builder",
-    "test:e2e": "npm run tools:setup && npm run build && node scripts/smoke-electron.mjs"
+    "test:e2e": "npm run tools:setup && npm run build && node scripts/smoke-electron.mjs",
+    "test:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
     "@ffprobe-installer/ffprobe": "^2.1.2",
@@ -54,6 +56,7 @@
       }
     ],
     "mac": {
+      "artifactName": "toMP3-macos-${arch}.${ext}",
       "category": "public.app-category.utilities",
       "target": [
         "dmg",
@@ -62,6 +65,7 @@
       "identity": null
     },
     "win": {
+      "artifactName": "toMP3-windows-${arch}.${ext}",
       "target": [
         "nsis"
       ]

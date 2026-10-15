@@ -27,7 +27,7 @@ function register(name, handler) {
   });
 }
 async function createWindow() {
-  window = new BrowserWindow({ width: 1220, height: 860, minWidth: 980, minHeight: 720, title: 'toMP3', icon: app.isPackaged ? undefined : path.join(app.getAppPath(), 'resources/icon.png'), backgroundColor: '#0b0b0d', titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 22, y: 23 }, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  window = new BrowserWindow({ width: 1220, height: 860, minWidth: 980, minHeight: 720, title: 'toMP3', icon: app.isPackaged ? undefined : path.join(app.getAppPath(), 'resources/icon.png'), backgroundColor: '#0b0b0d', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 22, y: 23 } } : { autoHideMenuBar: true }), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => { if (url !== `${origin}/` && url !== origin) event.preventDefault(); });
   window.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));

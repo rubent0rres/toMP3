@@ -1,6 +1,7 @@
 import { copyFile, chmod, access, rename, rm } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import path from 'node:path';
 const execute = promisify(execFile);
 
 export async function prepareBinary({ name, source, destination, installSource, versionArgs = ['-version'] }) {
@@ -14,7 +15,8 @@ export async function prepareBinary({ name, source, destination, installSource, 
       throw new Error(`No se pudo descargar ${name}. Revisa tu conexión y vuelve a ejecutar npm run tools:setup. ${error.message}`, { cause: error });
     }
   }
-  const temporary = `${destination}.${process.pid}.tmp`;
+  const extension = path.extname(destination);
+  const temporary = `${destination.slice(0, extension ? -extension.length : undefined)}.${process.pid}.tmp${extension}`;
   try {
     await copyFile(source, temporary);
     if (process.platform !== 'win32') await chmod(temporary, 0o755);

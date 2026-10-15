@@ -1,27 +1,48 @@
-# toMP3
+<p align="center">
+  <img src="resources/icon.png" width="112" alt="Logo de toMP3" />
+</p>
 
-Aplicación de escritorio con Electron + Next.js para guardar videos de YouTube y Reels de Facebook en **MP3** o **MP4**. Interfaz en español, archivos locales y sin servidor externo propio.
+<h1 align="center">toMP3</h1>
 
-## Iniciar el desarrollo
+<p align="center"><strong>Tu próximo play.</strong><br />De YouTube y Facebook a tu equipo, en MP3 o MP4.</p>
 
-Requiere Node.js 22 o posterior y acceso a internet durante la instalación.
+<p align="center">
+  <a href="https://github.com/rubent0rres/toMP3/releases/latest"><img alt="Última versión" src="https://img.shields.io/github/v/release/rubent0rres/toMP3?style=flat-square&color=b9b2ef&label=versi%C3%B3n" /></a>
+  <img alt="Windows y macOS" src="https://img.shields.io/badge/Windows%20%7C%20macOS-202023?style=flat-square" />
+  <img alt="MP3 y MP4" src="https://img.shields.io/badge/MP3%20%2B%20MP4-b0d9e5?style=flat-square&labelColor=202023" />
+</p>
 
-```sh
-npm ci
-npm run dev
-```
+<p align="center">
+  <a href="#descargas">Descargar</a> ·
+  <a href="#uso">Cómo usar</a> ·
+  <a href="#iniciar-el-desarrollo">Desarrollo</a>
+</p>
 
-El primer inicio prepara yt-dlp, FFmpeg y FFprobe en `resources/bin/`. Los siguientes inicios reutilizan las herramientas locales después de comprobar que funcionan. Si falta FFmpeg tanto en las dependencias como en esa carpeta (por ejemplo, cuando se omiten los scripts de instalación), se descarga automáticamente al ejecutar `npm run dev` o `npm run tools:setup`. No hace falta instalar Python ni estas herramientas en el sistema. La descarga de yt-dlp se verifica con el SHA-256 publicado por el proyecto oficial. El servidor de desarrollo utiliza `127.0.0.1:3210`; Electron se cierra junto con él al detener el comando.
+## Descargas
 
-## Abrir la versión compilada
+Elige el instalador para tu equipo. Incluye las herramientas de descarga y conversión; no necesitas instalar Node.js, Python ni FFmpeg para usar la app.
 
-```sh
-npm run tools:setup
-npm run build
-npm start
-```
+| Sistema | Descarga |
+| --- | --- |
+| **Windows de 64 bits** | [Descargar instalador .exe](https://github.com/rubent0rres/toMP3/releases/latest/download/toMP3-windows-x64.exe) |
+| **Mac con Apple Silicon** · M1 o posterior | [Descargar .dmg para Apple Silicon](https://github.com/rubent0rres/toMP3/releases/latest/download/toMP3-macos-arm64.dmg) |
+| **Mac con Intel** | [Descargar .dmg para Intel](https://github.com/rubent0rres/toMP3/releases/latest/download/toMP3-macos-x64.dmg) |
 
-`npm run dev:web` muestra solamente la interfaz en el navegador. Las descargas, el portapapeles y la selección de carpeta funcionan dentro de Electron.
+En Windows, ejecuta el instalador. En Mac, abre el DMG y arrastra **toMP3** a **Aplicaciones**. Puedes consultar la versión de tu procesador en el menú Apple → **Acerca de esta Mac**.
+
+[Todas las versiones y archivos ZIP](https://github.com/rubent0rres/toMP3/releases) · [Comprobar las descargas con SHA-256](https://github.com/rubent0rres/toMP3/releases/latest/download/SHA256SUMS.txt)
+
+Los instaladores aún no tienen firma digital ni notarización, por lo que Windows o macOS pueden mostrar un aviso al abrirlos.
+
+## Tu contenido, contigo
+
+![Interfaz de toMP3](docs/preview.png)
+
+| Audio a tu medida | Video listo para guardar | Archivos en tu equipo |
+| --- | --- | --- |
+| MP3 de 128 a 320 kbps | MP4 de YouTube y Reels públicos | Carpeta elegida por ti e historial local |
+
+Aplicación de escritorio con **Electron + Next.js**, interfaz en español y sin servidor externo propio.
 
 ## Uso
 
@@ -43,6 +64,27 @@ Acepta Reels públicos de Facebook con enlaces `facebook.com/reel/ID`, `facebook
 
 El historial se guarda en `downloads.json`, dentro de la carpeta de datos de Electron para toMP3. La carpeta de destino inicial es `Descargas/toMP3`.
 
+## Iniciar el desarrollo
+
+Requiere Node.js 22.12 o posterior y acceso a internet durante la instalación.
+
+```sh
+npm ci
+npm run dev
+```
+
+El primer inicio prepara yt-dlp, FFmpeg y FFprobe en `resources/bin/`. Los siguientes inicios reutilizan las herramientas locales después de comprobar que funcionan. Si falta FFmpeg tanto en las dependencias como en esa carpeta (por ejemplo, cuando se omiten los scripts de instalación), se descarga automáticamente al ejecutar `npm run dev` o `npm run tools:setup`. No hace falta instalar Python ni estas herramientas en el sistema. La descarga de yt-dlp se verifica con el SHA-256 publicado por el proyecto oficial. El servidor de desarrollo utiliza `127.0.0.1:3210`; Electron se cierra junto con él al detener el comando.
+
+## Abrir la versión compilada
+
+```sh
+npm run tools:setup
+npm run build
+npm start
+```
+
+`npm run dev:web` muestra solamente la interfaz en el navegador. Las descargas, el portapapeles y la selección de carpeta funcionan dentro de Electron.
+
 ## Verificación
 
 ```sh
@@ -62,7 +104,23 @@ npm run pack   # Aplicación local sin instalador
 npm run dist   # DMG/ZIP en macOS, NSIS en Windows, AppImage en Linux
 ```
 
-Los resultados quedan en `release/`. Compila en el sistema y arquitectura de destino: las herramientas multimedia se seleccionan para la máquina que ejecuta `tools:setup`. La versión de Mac se genera sin firma ni notarización; el proyecto todavía no configura publicación ni actualizaciones automáticas. No se ha validado la ejecución en Windows o Linux.
+Los resultados quedan en `release/`. Compila en el sistema y arquitectura de destino: las herramientas multimedia se seleccionan para la máquina que ejecuta `tools:setup`. Los instaladores de Windows y Mac se generan sin firma digital. Linux conserva su configuración de AppImage, pero no forma parte de la publicación ni de sus pruebas.
+
+### Publicar una versión en GitHub
+
+El flujo [Instaladores](https://github.com/rubent0rres/toMP3/actions/workflows/installers.yml) compila Windows x64, Mac arm64 y Mac Intel en equipos de GitHub con el sistema y arquitectura correspondientes. En cada uno ejecuta la compilación, revisión de tipos y estilos, pruebas unitarias y `npm run test:package`, que abre la app empaquetada y comprueba sus herramientas mediante conversiones locales a MP3 y MP4.
+
+Para publicar una versión nueva desde una copia limpia del repositorio:
+
+```sh
+npm version patch
+git push origin main
+git push origin --tags
+```
+
+La etiqueta `vX.Y.Z` debe coincidir con `package.json`. Cuando los tres instaladores pasan la verificación, se publican juntos en GitHub Releases con sus sumas SHA-256. Los enlaces de descarga de este README apuntan siempre a la última versión. También puedes ejecutar el flujo manualmente desde Actions para obtener los instaladores como artefactos sin publicar una versión.
+
+La app todavía no instala actualizaciones automáticamente; descarga la versión nueva desde Releases para actualizarla.
 
 Para actualizar el motor de descarga:
 
@@ -97,4 +155,4 @@ Fuentes y licencias de terceros:
 - [Electron](https://www.electronjs.org/): MIT.
 - [Next.js](https://nextjs.org/): MIT.
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp): consultar sus avisos y los componentes de la distribución binaria.
-- [FFmpeg](https://ffmpeg.org/legal.html), [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static) y [FFprobe installer](https://github.com/SavageCore/node-ffprobe-installer): las licencias dependen de las opciones de compilación del binario. Los binarios preparados son para desarrollo local; revisar las licencias, fuentes y requisitos de redistribución antes de publicar instaladores.
+- [FFmpeg](https://ffmpeg.org/legal.html), [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static) y [FFprobe installer](https://github.com/SavageCore/node-ffprobe-installer): las licencias dependen de las opciones de compilación del binario. Los avisos de los distribuidores y las referencias a sus fuentes se incluyen junto con las herramientas en la app; consulta también [resources/THIRD_PARTY.md](resources/THIRD_PARTY.md).
