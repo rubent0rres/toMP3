@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@electron-internal/extract-zip':
+        specifier: 1.0.5
+        version: 1.0.5
       '@ffprobe-installer/ffprobe':
         specifier: ^2.1.2
         version: 2.1.2

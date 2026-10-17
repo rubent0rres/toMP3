@@ -147,6 +147,81 @@ test('traduce errores de YouTube y red', () => {
   assert.match(friendlyError('HTTP Error 503'), /conectar/);
 });
 
+test('análisis simultáneos del mismo video comparten la consulta y después usan la caché', async t => {
+  let calls = 0;
+  const { manager } = await fixture(t, async child => {
+    calls++;
+    await new Promise(resolve => setTimeout(resolve, 20));
+    child.stdout.write(JSON.stringify({ id: video.id, title: video.title, duration: 19, formats: [
+      { ext: 'mp4', vcodec: 'avc1', height: 1080 }, { ext: 'mp4', vcodec: 'av01', height: 2160 },
+      { ext: 'mp4', vcodec: 'avc1', height: 1080 }, { ext: 'm4a', vcodec: 'none' },
+    ] }));
+    child.emit('close', 0);
+  });
+  manager.cache.clear();
+  const results = await Promise.all([manager.inspect(url), manager.inspect('https://youtu.be/jNQXAC9IVRw?si=abc'), manager.inspect(url)]);
+  assert.equal(calls, 1);
+  assert.deepEqual(results[0].resolutions, [2160, 1080]);
+  assert.deepEqual(results[1], results[0]);
+  assert.deepEqual(await manager.inspect(url), results[0]);
+  assert.equal(calls, 1);
+  assert.equal(manager.pendingInspections.size, 0);
+});
+test('un análisis fallido compartido permite reintentar sin reutilizar el fallo', async t => {
+  let calls = 0;
+  const { manager } = await fixture(t, child => {
+    if (++calls === 1) { child.stderr.write('Network connection failed'); child.emit('close', 1); }
+    else { child.stdout.write(JSON.stringify({ id: video.id, title: video.title })); child.emit('close', 0); }
+  });
+  manager.cache.clear();
+  const results = await Promise.allSettled([manager.inspect(url), manager.inspect(url)]);
+  assert.ok(results.every(result => result.status === 'rejected'));
+  assert.equal(calls, 1);
+  assert.equal((await manager.inspect(url)).id, video.id);
+  assert.equal(calls, 2);
+  assert.equal(manager.pendingInspections.size, 0);
+});
+test('consulta de nuevo los metadatos después de diez minutos', async t => {
+  let calls = 0;
+  const { manager } = await fixture(t, child => {
+    calls++; child.stdout.write(JSON.stringify({ id: video.id, title: 'Título actualizado' })); child.emit('close', 0);
+  });
+  manager.cache.get(url).at = Date.now() - 11 * 60 * 1000;
+  assert.equal((await manager.inspect(url)).title, 'Título actualizado');
+  assert.equal(calls, 1);
+});
+test('prepara el motor una vez, sin red, y espera su arranque antes de analizar', async t => {
+  const calls = [];
+  let finishWarmup;
+  const { manager } = await fixture(t, (child, args) => {
+    if (args.includes('--version')) { calls.push('warmup'); finishWarmup = () => child.emit('close', 0); }
+    else { calls.push('inspect'); child.stdout.write(JSON.stringify({ id: video.id })); child.emit('close', 0); }
+  });
+  manager.cache.clear();
+  const warming = manager.warmup();
+  assert.equal(manager.warmup(), warming);
+  const operation = manager.inspect(url);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(calls, ['warmup']);
+  finishWarmup();
+  assert.equal((await operation).id, video.id);
+  await manager.warmup();
+  assert.deepEqual(calls, ['warmup', 'inspect']);
+  assert.equal(manager.inspections.size, 0);
+});
+test('cerrar durante la preparación detiene el motor sin iniciar análisis pendientes', async t => {
+  let launches = 0;
+  const { manager } = await fixture(t, () => { launches++; });
+  manager.cache.clear();
+  const warming = manager.warmup();
+  const operation = manager.inspect(url);
+  manager.shutdown();
+  await warming;
+  await assert.rejects(operation, /cerrando/);
+  assert.equal(manager.inspections.size, 0);
+  assert.equal(launches, 0);
+});
+
 test('acepta Reels directos, compartidos y enlaces cortos de Facebook', () => {
   const reel = 'https://www.facebook.com/reel/1815304716326461';
   assert.equal(normalizeUrl(`${reel}/?mibextid=abc&rdid=xyz`), reel);

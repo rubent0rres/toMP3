@@ -4,6 +4,7 @@ const fs = require('node:fs/promises');
 const { pathToFileURL } = require('node:url');
 const { DownloadManager } = require('./downloader.cjs');
 const { contactLink } = require('./contact.cjs');
+const { ytDlpPath } = require('../shared/tools.cjs');
 app.setName('toMP3');
 protocol.registerSchemesAsPrivileged([{ scheme: 'tomp3', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 const locked = app.requestSingleInstanceLock();
@@ -58,9 +59,10 @@ if (locked) app.whenReady().then(async () => {
   const suffix = process.platform === 'win32' ? '.exe' : '';
   const destination = typeof saved.destination === 'string' && path.isAbsolute(saved.destination) ? saved.destination : path.join(app.getPath('downloads'), 'toMP3');
   await fs.mkdir(destination, { recursive: true }).catch(() => {});
-  manager = new DownloadManager({ executable: path.join(bin, `yt-dlp${suffix}`), ffmpegDir: bin, destination, jobs: Array.isArray(saved.jobs) ? saved.jobs.filter(j => j && typeof j.id === 'string' && typeof j.url === 'string') : [] });
+  const executable = ytDlpPath(bin);
+  manager = new DownloadManager({ executable, ffmpegDir: bin, destination, jobs: Array.isArray(saved.jobs) ? saved.jobs.filter(j => j && typeof j.id === 'string' && typeof j.url === 'string') : [] });
   let toolsReady = true;
-  for (const name of ['yt-dlp', 'ffmpeg', 'ffprobe']) { try { await fs.access(path.join(bin, `${name}${suffix}`)); } catch { toolsReady = false; } }
+  for (const file of [executable, ...['ffmpeg', 'ffprobe'].map(name => path.join(bin, `${name}${suffix}`))]) { try { await fs.access(file); } catch { toolsReady = false; } }
   const state = () => ({ ...manager.snapshot(), toolsReady, version: app.getVersion(), platform: process.platform });
   manager.on('change', () => { if (window && !window.isDestroyed()) window.webContents.send('tomp3:state-changed', state()); clearTimeout(saveTimer); saveTimer = setTimeout(() => persist().catch(console.error), 350); });
   register('state', state);
@@ -79,6 +81,7 @@ if (locked) app.whenReady().then(async () => {
   register('reveal', async id => { const job = manager.jobs.find(j => j.id === id && j.status === 'completed'); if (!job?.filePath || path.dirname(job.filePath) !== job.destination) throw new Error('No se encontró el archivo.'); await fs.access(job.filePath).catch(() => { throw new Error('El archivo se movió o se eliminó.'); }); shell.showItemInFolder(job.filePath); });
   await persist();
   await createWindow();
+  if (toolsReady) void manager.warmup();
   app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) void createWindow(); });
 }).catch(error => { dialog.showErrorBox('No se pudo abrir toMP3', error.message); app.quit(); });
 app.on('second-instance', () => { if (window) { if (window.isMinimized()) window.restore(); window.focus(); } });

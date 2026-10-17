@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const { prepareMp4 } = require('../electron/media.cjs');
+const { ytDlpPath } = require('../shared/tools.cjs');
 const execute = promisify(execFile);
 const win = process.platform === 'win32';
 const suffix = win ? '.exe' : '';
@@ -27,7 +28,8 @@ delete env.ELECTRON_RUN_AS_NODE;
 delete env.TOMP3_DEV_URL;
 const versions = {};
 for (const name of ['yt-dlp', 'ffmpeg', 'ffprobe']) {
-  const { stdout } = await execute(path.join(bin, `${name}${suffix}`), [name === 'yt-dlp' ? '--version' : '-version'], { timeout: 30000, windowsHide: true });
+  const file = name === 'yt-dlp' ? ytDlpPath(bin) : path.join(bin, `${name}${suffix}`);
+  const { stdout } = await execute(file, [name === 'yt-dlp' ? '--version' : '-version'], { timeout: 30000, windowsHide: true });
   versions[name] = stdout.split(/\r?\n/)[0];
 }
 const ffmpeg = path.join(bin, `ffmpeg${suffix}`);

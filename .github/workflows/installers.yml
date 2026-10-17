@@ -105,6 +105,8 @@ jobs:
           cat > release-notes.md <<'EOF'
           Descarga videos de YouTube y Reels públicos de Facebook como **MP3** o **MP4**.
 
+          Análisis más rápido: el motor ya viene extraído y se prepara en segundo plano al abrir la app. Los enlaces analizados se reutilizan durante 10 minutos y las solicitudes simultáneas del mismo enlace comparten una consulta.
+
           Los MP4 se verifican y preparan con video H.264 y audio AAC-LC para facilitar su reproducción y edición. Las pistas que ya son compatibles se conservan sin volver a comprimirlas.
 
           | Tu equipo | Archivo |

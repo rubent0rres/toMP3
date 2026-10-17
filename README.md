@@ -58,6 +58,7 @@ Acepta Reels públicos de Facebook con enlaces `facebook.com/reel/ID`, `facebook
 - MP4 de YouTube: resolución máxima de 720p, 1080p, 1440p o 2160p; no se inventa una resolución superior a la fuente.
 - Los MP4 se preparan con video H.264 de 8 bits y audio AAC-LC para facilitar su reproducción en QuickTime y los reproductores de Windows. Se conservan las pistas que ya son compatibles y se convierten las que lo necesitan. Los archivos se verifican antes de marcar la descarga como completada. La preparación puede tardar más en videos largos o de alta resolución.
 - Cola de hasta 20 descargas pendientes, procesadas una a la vez.
+- El motor se prepara en segundo plano al abrir la app. El análisis conserva sus resultados durante 10 minutos y las solicitudes simultáneas del mismo enlace comparten una sola consulta.
 - Historial local de hasta 100 registros. Limpiarlo no elimina tus archivos.
 - Los archivos existentes se conservan; se agrega un número al nombre cuando hace falta.
 - Cancelar elimina los temporales de esa descarga. Si la aplicación se cierra abruptamente, el registro queda disponible para reintentar al abrir de nuevo; puede quedar un temporal en `.tomp3` dentro de la carpeta elegida.
@@ -75,6 +76,8 @@ npm run dev
 ```
 
 El primer inicio prepara yt-dlp, FFmpeg y FFprobe en `resources/bin/`. Los siguientes inicios reutilizan las herramientas locales después de comprobar que funcionan. Si falta FFmpeg tanto en las dependencias como en esa carpeta (por ejemplo, cuando se omiten los scripts de instalación), se descarga automáticamente al ejecutar `npm run dev` o `npm run tools:setup`. No hace falta instalar Python ni estas herramientas en el sistema. La descarga de yt-dlp se verifica con el SHA-256 publicado por el proyecto oficial. El servidor de desarrollo utiliza `127.0.0.1:3210`; Electron se cierra junto con él al detener el comando.
+
+En macOS y Windows se incluye la distribución oficial de yt-dlp con sus archivos ya extraídos en `resources/bin/yt-dlp-runtime/`. Así se evita descomprimir el motor en cada análisis o descarga. La primera apertura puede tardar más por las comprobaciones del sistema; el tiempo de consulta también depende de YouTube, Facebook y la conexión.
 
 ## Abrir la versión compilada
 

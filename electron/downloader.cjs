@@ -81,6 +81,8 @@ class DownloadManager extends EventEmitter {
     this.spawnProcess = spawnProcess;
     this.prepareVideo = prepareVideo;
     this.cache = new Map();
+    this.pendingInspections = new Map();
+    this.warming = null;
     this.jobs = jobs.slice(0, 100).map(job => ['queued', 'downloading', 'converting'].includes(job.status) ? { ...job, status: 'error', error: 'La aplicación se cerró antes de terminar. Puedes reintentar la descarga.' } : job);
     this.active = null;
     this.stopping = false;
@@ -90,14 +92,39 @@ class DownloadManager extends EventEmitter {
   notify() { this.emit('change', this.snapshot()); }
   baseArgs() { return ['--ignore-config', '--no-playlist', '--no-colors', '--no-warnings', '--socket-timeout', '20', '--retries', '3', '--js-runtimes', `node:${this.runtime}`, '--ffmpeg-location', this.ffmpegDir]; }
   launch(args) { return this.spawnProcess(this.executable, [...this.baseArgs(), ...args], { shell: false, windowsHide: true, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, detached: process.platform !== 'win32' }); }
+  warmup() {
+    if (this.warming) return this.warming;
+    if (this.stopping || this.pendingInspections.size) return Promise.resolve();
+    // Load the local runtime while the user pastes a link, without network requests.
+    this.warming = new Promise(resolve => {
+      let child;
+      try { child = this.launch(['--version']); } catch { resolve(); return; }
+      this.inspections.add(child);
+      const finish = () => { clearTimeout(timer); this.inspections.delete(child); resolve(); };
+      const timer = setTimeout(() => { this.kill(child); finish(); }, 15000);
+      child.stdout.resume(); child.stderr.resume();
+      child.once('error', finish);
+      child.once('close', finish);
+    });
+    return this.warming;
+  }
   async inspect(input) {
     if (this.stopping) throw new Error('La aplicación se está cerrando.');
     const url = normalizeUrl(input);
-    const source = sourceForUrl(url);
-    const platform = source === 'facebook' ? 'Facebook' : 'YouTube';
     const cached = this.cache.get(url);
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) return cached.video;
-    if (this.inspections.size >= 3) throw new Error('Espera a que termine el análisis actual.');
+    if (this.pendingInspections.has(url)) return this.pendingInspections.get(url);
+    if (this.pendingInspections.size >= 3) throw new Error('Espera a que termine el análisis actual.');
+    const operation = this.inspectUncached(url);
+    this.pendingInspections.set(url, operation);
+    try { return await operation; }
+    finally { this.pendingInspections.delete(url); }
+  }
+  async inspectUncached(url) {
+    await this.warming;
+    if (this.stopping) throw new Error('La aplicación se está cerrando.');
+    const source = sourceForUrl(url);
+    const platform = source === 'facebook' ? 'Facebook' : 'YouTube';
     const child = this.launch(['--dump-single-json', '--skip-download', '--', url]);
     this.inspections.add(child);
     return new Promise((resolve, reject) => {
@@ -122,7 +149,7 @@ class DownloadManager extends EventEmitter {
           const video = { url: canonicalUrl, source, id: info.id, title: info.title || 'Video sin título', author: info.channel || info.uploader || platform, duration: Number(info.duration) || 0, thumbnail: info.thumbnail?.startsWith('https://') ? info.thumbnail : '', resolutions: [...new Set((info.formats || []).filter(f => f.ext === 'mp4' && f.vcodec !== 'none' && f.height).map(f => f.height))].sort((a,b) => b-a) };
           this.cache.set(url, { at: Date.now(), video });
           if (canonicalUrl !== url) this.cache.set(canonicalUrl, { at: Date.now(), video });
-          if (this.cache.size > 100) this.cache.delete(this.cache.keys().next().value);
+          while (this.cache.size > 100) this.cache.delete(this.cache.keys().next().value);
           resolve(video);
         } catch (error) { reject(error instanceof SyntaxError ? new Error('No se pudo leer la información del video.') : error); }
       });

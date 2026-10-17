@@ -1,7 +1,7 @@
 {
   "name": "tomp3",
   "productName": "toMP3",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Descarga videos de YouTube como MP4 o MP3 desde tu escritorio.",
   "author": "Yoots Software",
   "private": true,
@@ -21,6 +21,7 @@
     "test:package": "node scripts/verify-package.mjs"
   },
   "devDependencies": {
+    "@electron-internal/extract-zip": "1.0.5",
     "@ffprobe-installer/ffprobe": "^2.1.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
