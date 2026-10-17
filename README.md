@@ -54,8 +54,9 @@ Aplicación de escritorio con **Electron + Next.js**, interfaz en español y sin
 Acepta Reels públicos de Facebook con enlaces `facebook.com/reel/ID`, `facebook.com/share/r/CODIGO/` y `fb.watch/CODIGO/`. Los enlaces móviles y los parámetros de compartir se normalizan. También acepta enlaces `youtube.com/watch`, `youtu.be`, Shorts, `live` y `embed` de un video individual. Si un enlace incluye una lista, solo se descarga el video seleccionado. Las listas completas y las transmisiones activas no están incluidas.
 
 - MP3: 128, 192, 256 o 320 kbps. La calidad de la fuente limita la calidad del resultado.
-- MP4 de Facebook: mejor calidad original disponible, con video y audio. No se aplica un filtro de resolución porque Facebook puede omitir ese dato en sus pistas HD/SD.
-- MP4 de YouTube: resolución máxima de 720p, 1080p, 1440p o 2160p. Se usan las pistas MP4/M4A disponibles y se unen localmente; no se inventa una resolución superior a la fuente.
+- MP4 de Facebook: mejor calidad disponible, con video y audio. No se aplica un filtro de resolución porque Facebook puede omitir ese dato en sus pistas HD/SD.
+- MP4 de YouTube: resolución máxima de 720p, 1080p, 1440p o 2160p; no se inventa una resolución superior a la fuente.
+- Los MP4 se preparan con video H.264 de 8 bits y audio AAC-LC para facilitar su reproducción en QuickTime y los reproductores de Windows. Se conservan las pistas que ya son compatibles y se convierten las que lo necesitan. Los archivos se verifican antes de marcar la descarga como completada. La preparación puede tardar más en videos largos o de alta resolución.
 - Cola de hasta 20 descargas pendientes, procesadas una a la vez.
 - Historial local de hasta 100 registros. Limpiarlo no elimina tus archivos.
 - Los archivos existentes se conservan; se agrega un número al nombre cuando hace falta.

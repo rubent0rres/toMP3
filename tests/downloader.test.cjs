@@ -8,10 +8,10 @@ const path = require('node:path');
 const { DownloadManager, normalizeUrl, downloadArgs, friendlyError } = require('../electron/downloader.cjs');
 const url = 'https://www.youtube.com/watch?v=jNQXAC9IVRw';
 const video = { id: 'jNQXAC9IVRw', url, title: 'Video de prueba', author: 'Pruebas', duration: 19, thumbnail: '', resolutions: [720] };
-async function fixture(t, behavior) {
+async function fixture(t, behavior, prepareVideo = async ({ input }) => input) {
   const folder = await fs.mkdtemp(path.join(os.tmpdir(), 'tomp3-test-'));
   t.after(() => fs.rm(folder, { recursive: true, force: true }));
-  const manager = new DownloadManager({ executable: '/test/yt-dlp', ffmpegDir: '/test', destination: folder, spawnProcess: (_cmd, args, options) => {
+  const manager = new DownloadManager({ executable: '/test/yt-dlp', ffmpegDir: '/test', destination: folder, prepareVideo, spawnProcess: (_cmd, args, options) => {
     assert.equal(options.shell, false);
     const child = new EventEmitter(); child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.pid = 0;
     child.kill = () => child.emit('close', null);
@@ -110,6 +110,30 @@ test('rechaza archivos vacíos y limpia el trabajo fallido', async t => {
   await manager.enqueue(url, { format: 'mp3', quality: '320' });
   await waitFor(manager, () => manager.jobs[0].status === 'error' && !manager.active);
   assert.match(manager.jobs[0].error, /vacío/);
+  assert.deepEqual(await fs.readdir(path.join(folder, '.tomp3')), []);
+});
+test('no publica un MP4 si falla la preparación para reproducirlo', async t => {
+  const { manager, folder } = await fixture(t, (child, args) => complete(child, args), async () => { throw new Error('Pistas de video inválidas'); });
+  await manager.enqueue(url, { format: 'mp4', quality: '720' });
+  await waitFor(manager, () => manager.jobs[0].status === 'error' && !manager.active);
+  assert.match(manager.jobs[0].error, /Pistas de video inválidas/);
+  assert.equal(manager.jobs[0].filePath, undefined);
+  assert.deepEqual(await fs.readdir(folder), ['.tomp3']);
+  assert.deepEqual(await fs.readdir(path.join(folder, '.tomp3')), []);
+});
+test('cancelar durante la preparación no publica el video y deja avanzar la cola', async t => {
+  let releasePreparation;
+  let started;
+  const preparationStarted = new Promise(resolve => { started = resolve; });
+  const { manager, folder } = await fixture(t, (child, args) => complete(child, args), () => new Promise(resolve => { releasePreparation = resolve; started(); }));
+  const id = await manager.enqueue(url, { format: 'mp4', quality: '720' });
+  await preparationStarted;
+  await manager.enqueue(url, { format: 'mp3', quality: '192' });
+  manager.cancel(id);
+  releasePreparation(path.join(folder, 'unused.mp4'));
+  await waitFor(manager, () => !manager.active && manager.jobs.some(job => job.status === 'completed'));
+  assert.equal(manager.jobs.find(job => job.id === id).status, 'cancelled');
+  assert.equal((await fs.readdir(folder)).some(name => name.endsWith('.mp4')), false);
   assert.deepEqual(await fs.readdir(path.join(folder, '.tomp3')), []);
 });
 test('recupera historial interrumpido sin reanudar procesos automáticamente', () => {

@@ -1,12 +1,15 @@
 import { _electron as electron } from 'playwright';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { promisify } from 'node:util';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(import.meta.url);
+const { prepareMp4 } = require('../electron/media.cjs');
 const execute = promisify(execFile);
 const win = process.platform === 'win32';
 const suffix = win ? '.exe' : '';
@@ -32,6 +35,23 @@ const ffprobe = path.join(bin, `ffprobe${suffix}`);
 const run = (file, args) => execute(file, args, { timeout: 60000, windowsHide: true });
 await run(ffmpeg, ['-y', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'libmp3lame', '-b:a', '192k', path.join(work, 'audio.mp3')]);
 await run(ffmpeg, ['-y', '-f', 'lavfi', '-i', 'testsrc=size=160x90:rate=10:duration=1', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-shortest', path.join(work, 'video.mp4')]);
+const media = path.join(work, 'media');
+await rm(media, { recursive: true, force: true });
+for (const variant of ['compatible', 'av1-opus']) {
+  const folder = path.join(media, variant);
+  await mkdir(folder, { recursive: true });
+  const source = path.join(folder, 'source.mp4');
+  if (variant === 'compatible') await writeFile(source, await readFile(path.join(work, 'video.mp4')));
+  else await run(ffmpeg, ['-y', '-f', 'lavfi', '-i', 'testsrc=size=64x64:rate=4:duration=1', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:v', 'libaom-av1', '-cpu-used', '8', '-pix_fmt', 'yuv420p', '-c:a', 'libopus', '-shortest', source]);
+  const prepared = await prepareMp4({ input: source, ffmpegDir: bin });
+  const { stdout } = await run(ffprobe, ['-v', 'error', '-show_entries', 'stream=codec_type,codec_name,profile,pix_fmt', '-of', 'json', prepared]);
+  const streams = JSON.parse(stdout).streams;
+  assert.ok(streams.some(stream => stream.codec_type === 'video' && stream.codec_name === 'h264' && stream.pix_fmt === 'yuv420p'));
+  assert.ok(streams.some(stream => stream.codec_type === 'audio' && stream.codec_name === 'aac' && stream.profile === 'LC'));
+  await run(ffmpeg, ['-v', 'error', '-xerror', '-i', prepared, '-map', '0:v:0', '-map', '0:a:0', '-f', 'null', '-']);
+  const contents = await readFile(prepared);
+  assert.ok(contents.indexOf(Buffer.from('moov')) < contents.indexOf(Buffer.from('mdat')));
+}
 for (const [file, video] of [['audio.mp3', false], ['video.mp4', true]]) {
   const { stdout } = await run(ffprobe, ['-v', 'quiet', '-show_entries', 'stream=codec_type', '-of', 'json', path.join(work, file)]);
   const streams = JSON.parse(stdout).streams;

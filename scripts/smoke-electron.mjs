@@ -70,10 +70,15 @@ try {
   assert.deepEqual(errors, []);
   assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
   for (const job of finished.jobs) {
-    const probe = JSON.parse(execFileSync(path.join(root, 'resources/bin/ffprobe'), ['-v', 'quiet', '-show_entries', 'format=duration:stream=codec_type,codec_name', '-of', 'json', job.filePath], { encoding: 'utf8' }));
+    const probe = JSON.parse(execFileSync(path.join(root, 'resources/bin/ffprobe'), ['-v', 'quiet', '-show_entries', 'format=duration:stream=codec_type,codec_name,pix_fmt,profile', '-of', 'json', job.filePath], { encoding: 'utf8' }));
     assert.ok(Number(probe.format.duration) > 1);
     assert.ok(probe.streams.some(stream => stream.codec_type === 'audio'));
     assert.equal(probe.streams.some(stream => stream.codec_type === 'video'), job.format === 'mp4');
+    if (job.format === 'mp4') {
+      assert.ok(probe.streams.some(stream => stream.codec_name === 'h264' && stream.pix_fmt === 'yuv420p'));
+      assert.ok(probe.streams.some(stream => stream.codec_name === 'aac' && stream.profile === 'LC'));
+      execFileSync(path.join(root, 'resources/bin/ffmpeg'), ['-v', 'error', '-xerror', '-i', job.filePath, '-map', '0:v:0', '-map', '0:a:0', '-f', 'null', '-'], { timeout: 60000 });
+    }
   }
   await app.close();
   app = await electron.launch(launchOptions);

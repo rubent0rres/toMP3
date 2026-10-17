@@ -4,6 +4,7 @@ const { randomUUID } = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { constants } = require('node:fs');
+const { prepareMp4 } = require('./media.cjs');
 
 function normalizeUrl(input) {
   const invalid = 'Pega un enlace de YouTube o de un Reel de Facebook.';
@@ -52,6 +53,7 @@ function downloadArgs(url, options, folder) {
   if (options.format === 'mp3') args.push('-f', 'bestaudio/best', '-x', '--audio-format', 'mp3', '--audio-quality', `${options.quality}K`);
   else if (source === 'facebook') args.push('-f', 'bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]', '--merge-output-format', 'mp4', '--remux-video', 'mp4');
   else args.push('-f', `bv*[ext=mp4][height<=${options.quality}]+ba[ext=m4a]/b[ext=mp4][height<=${options.quality}]`, '--merge-output-format', 'mp4', '--remux-video', 'mp4');
+  if (options.format === 'mp4') args.push('-S', 'res,vcodec:h264,acodec:aac');
   return [...args, '--', normalized];
 }
 function friendlyError(raw, inputUrl) {
@@ -70,13 +72,14 @@ function friendlyError(raw, inputUrl) {
 }
 
 class DownloadManager extends EventEmitter {
-  constructor({ executable, ffmpegDir, runtime = process.execPath, destination, jobs = [], spawnProcess = spawn }) {
+  constructor({ executable, ffmpegDir, runtime = process.execPath, destination, jobs = [], spawnProcess = spawn, prepareVideo = prepareMp4 }) {
     super();
     this.executable = executable;
     this.ffmpegDir = ffmpegDir;
     this.runtime = runtime;
     this.destination = destination;
     this.spawnProcess = spawnProcess;
+    this.prepareVideo = prepareVideo;
     this.cache = new Map();
     this.jobs = jobs.slice(0, 100).map(job => ['queued', 'downloading', 'converting'].includes(job.status) ? { ...job, status: 'error', error: 'La aplicación se cerró antes de terminar. Puedes reintentar la descarga.' } : job);
     this.active = null;
@@ -185,6 +188,12 @@ class DownloadManager extends EventEmitter {
       if (!output || typeof output !== 'string' || path.dirname(path.resolve(output)) !== path.resolve(staging) || path.extname(output) !== `.${job.format}`) throw new Error('No se encontró el archivo final en el formato solicitado.');
       if (!(await fs.stat(output)).size) throw new Error('El archivo descargado está vacío.');
       const base = path.basename(output, path.extname(output));
+      clearTimeout(active.watchdog);
+      if (job.format === 'mp4') {
+        job.status = 'converting'; job.progress = 100; job.speed = null; job.eta = null; this.notify();
+        output = await this.prepareVideo({ input: output, ffmpegDir: this.ffmpegDir, spawnProcess: this.spawnProcess, onProcess: process => { active.child = process; }, isCancelled: () => active.cancelled || this.stopping, killProcess: process => this.kill(process) });
+        if (active.cancelled || this.stopping) return;
+      }
       let finalPath;
       for (let i = 0; i < 1000; i++) {
         if (active.cancelled || this.stopping) return;

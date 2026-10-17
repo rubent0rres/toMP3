@@ -103,6 +103,8 @@ jobs:
           cat > release-notes.md <<'EOF'
           Descarga videos de YouTube y Reels públicos de Facebook como **MP3** o **MP4**.
 
+          Los MP4 se verifican y preparan con video H.264 y audio AAC-LC para facilitar su reproducción y edición. Las pistas que ya son compatibles se conservan sin volver a comprimirlas.
+
           | Tu equipo | Archivo |
           | --- | --- |
           | Windows de 64 bits | `toMP3-windows-x64.exe` |

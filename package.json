@@ -1,7 +1,7 @@
 {
   "name": "tomp3",
   "productName": "toMP3",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Descarga videos de YouTube como MP4 o MP3 desde tu escritorio.",
   "author": "Yoots Software",
   "private": true,
