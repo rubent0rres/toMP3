@@ -24,7 +24,9 @@ if (manifest?.platform === process.platform && manifest?.arch === process.arch &
 }
 if (!valid) {
   console.log('Preparando yt-dlp desde su distribución oficial…');
-  const res = await fetch('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest', { headers: { 'User-Agent': 'toMP3-setup' }, signal: AbortSignal.timeout(30000) });
+  const headers = { 'User-Agent': 'toMP3-setup' };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const res = await fetch('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest', { headers, signal: AbortSignal.timeout(30000) });
   if (!res.ok) throw new Error(`No se pudo consultar yt-dlp (${res.status}).`);
   const release = await res.json();
   const asset = release.assets.find(a => a.name === assets[process.platform]);

@@ -50,6 +50,8 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run tools:setup
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Generar instalador nativo
         run: npx --no-install electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
       - run: npm run test:package
